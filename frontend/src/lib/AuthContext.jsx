@@ -29,7 +29,10 @@ export function AuthProvider({ children }) {
       supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: window.location.origin },
+        options: {
+          emailRedirectTo: window.location.origin,
+          emailConfirmTo: false,
+        },
       }),
     signOut: () => supabase.auth.signOut(),
   };

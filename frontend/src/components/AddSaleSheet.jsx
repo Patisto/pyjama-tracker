@@ -4,6 +4,19 @@ import { api } from '../lib/api';
 
 const SIZES = ['XS', 'Small', 'Medium', 'Large', 'XL', 'XXL'];
 
+const COLOURS = [
+  { name: 'Black',  hex: '#1a1a1a' },
+  { name: 'White',  hex: '#f0f0f0' },
+  { name: 'Navy',   hex: '#1B3A6B' },
+  { name: 'Red',    hex: '#C0392B' },
+  { name: 'Green',  hex: '#27500A' },
+  { name: 'Pink',   hex: '#ED93B1' },
+  { name: 'Grey',   hex: '#888780' },
+  { name: 'Brown',  hex: '#6B3A2A' },
+  { name: 'Yellow', hex: '#EF9F27' },
+  { name: 'Purple', hex: '#534AB7' },
+];
+
 export default function AddSaleSheet({ onClose, onSaved }) {
   const [form, setForm] = useState({
     customerName: '',
@@ -26,49 +39,30 @@ export default function AddSaleSheet({ onClose, onSaved }) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
-  // Search customers when name changes
   useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
+    clearTimeout(searchTimeoutRef.current);
     if (form.customerName.trim().length < 2) {
       setCustomerResults([]);
       setShowDropdown(false);
       return;
     }
-
     searchTimeoutRef.current = setTimeout(async () => {
       try {
         const results = await api.getCustomers(form.customerName);
         setCustomerResults(results);
         setShowDropdown(results.length > 0);
-      } catch (err) {
-        console.error('Failed to search customers:', err);
-      }
+      } catch {}
     }, 300);
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
+    return () => clearTimeout(searchTimeoutRef.current);
   }, [form.customerName]);
 
   function selectCustomer(customer) {
-    setForm((f) => ({
-      ...f,
-      customerName: customer.name,
-      customerPhone: customer.phone || '',
-    }));
+    setForm((f) => ({ ...f, customerName: customer.name, customerPhone: customer.phone || '' }));
     setShowDropdown(false);
   }
 
   async function handleSubmit() {
-    if (!form.customerName.trim()) {
-      setError('Customer name is required.');
-      return;
-    }
+    if (!form.customerName.trim()) { setError('Customer name is required.'); return; }
     setSaving(true);
     setError('');
     try {
@@ -83,32 +77,32 @@ export default function AddSaleSheet({ onClose, onSaved }) {
   }
 
   return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.page} onClick={(e) => e.stopPropagation()}>
+    <div style={s.overlay} onClick={onClose}>
+      <style>{`
+        @keyframes sheet-up { from { transform: translateY(100%) } to { transform: translateY(0) } }
+        .colour-dot { width:28px;height:28px;border-radius:50%;border:2.5px solid transparent;cursor:pointer;flex-shrink:0;transition:transform 0.1s }
+        .colour-dot:active { transform:scale(0.9) }
+        .chip { padding:7px 14px;border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:all 0.12s }
+      `}</style>
 
-        {/* Handle bar */}
-        <div style={styles.handleWrap}>
-          <div style={styles.handle} />
+      <div style={s.sheet} onClick={(e) => e.stopPropagation()}>
+
+        <div style={s.handleWrap}><div style={s.handle} /></div>
+
+        <div style={s.header}>
+          <span style={s.title}>New sale</span>
+          <button style={s.closeBtn} onClick={onClose} aria-label="Close"><X size={20} /></button>
         </div>
 
-        {/* Header */}
-        <div style={styles.header}>
-          <span style={styles.title}>New sale</span>
-          <button style={styles.closeBtn} onClick={onClose} aria-label="Close">
-            <X size={20} color="var(--color-muted)" />
-          </button>
-        </div>
-
-        {/* Scrollable fields */}
-        <div style={styles.body}>
+        <div style={s.body}>
 
           {/* Customer */}
-          <div style={styles.section}>
-            <p style={styles.sectionLabel}>Customer</p>
-            <div style={styles.row}>
+          <div style={s.section}>
+            <p style={s.label}>Customer</p>
+            <div style={s.row}>
               <div style={{ flex: 1, position: 'relative' }}>
                 <input
-                  style={styles.input}
+                  style={s.input}
                   type="text"
                   placeholder="Name"
                   value={form.customerName}
@@ -116,29 +110,24 @@ export default function AddSaleSheet({ onClose, onSaved }) {
                   autoFocus
                 />
                 {showDropdown && customerResults.length > 0 && (
-                  <div style={styles.dropdown}>
-                    {customerResults.map((customer, index) => (
+                  <div style={s.dropdown}>
+                    {customerResults.map((c, i) => (
                       <div
-                        key={customer.id}
-                        style={{
-                          ...styles.dropdownItem,
-                          background: hoveredIndex === index ? 'var(--color-bg)' : 'transparent',
-                        }}
-                        onClick={() => selectCustomer(customer)}
-                        onMouseEnter={() => setHoveredIndex(index)}
+                        key={c.id}
+                        style={{ ...s.dropdownItem, background: hoveredIndex === i ? 'var(--color-background-secondary)' : 'transparent' }}
+                        onClick={() => selectCustomer(c)}
+                        onMouseEnter={() => setHoveredIndex(i)}
                         onMouseLeave={() => setHoveredIndex(-1)}
                       >
-                        <div style={styles.customerName}>{customer.name}</div>
-                        {customer.phone && (
-                          <div style={styles.customerPhone}>{customer.phone}</div>
-                        )}
+                        <div style={s.dropName}>{c.name}</div>
+                        {c.phone && <div style={s.dropPhone}>{c.phone}</div>}
                       </div>
                     ))}
                   </div>
                 )}
               </div>
               <input
-                style={{ ...styles.input, flex: '0 0 38%' }}
+                style={{ ...s.input, flex: '0 0 38%' }}
                 type="tel"
                 placeholder="Phone"
                 inputMode="tel"
@@ -149,10 +138,10 @@ export default function AddSaleSheet({ onClose, onSaved }) {
           </div>
 
           {/* Item */}
-          <div style={styles.section}>
-            <p style={styles.sectionLabel}>Item</p>
+          <div style={s.section}>
+            <p style={s.label}>Item</p>
             <input
-              style={styles.input}
+              style={s.input}
               type="text"
               placeholder="e.g. PJ Set, Dress, Top…"
               value={form.item}
@@ -161,55 +150,77 @@ export default function AddSaleSheet({ onClose, onSaved }) {
           </div>
 
           {/* Size */}
-          <div style={styles.section}>
-            <p style={styles.sectionLabel}>Size</p>
-            <div style={styles.chipRow}>
-              {SIZES.map((s) => (
+          <div style={s.section}>
+            <p style={s.label}>Size</p>
+            <div style={s.chipRow}>
+              {SIZES.map((sz) => (
                 <button
-                  key={s}
+                  key={sz}
                   type="button"
-                  style={form.size === s ? styles.chipActive : styles.chip}
-                  onClick={() => update('size', s)}
+                  className="chip"
+                  style={form.size === sz ? s.chipActive : s.chip}
+                  onClick={() => update('size', sz)}
                 >
-                  {s}
+                  {sz}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Colour + Qty */}
-          <div style={styles.section}>
-            <div style={styles.row}>
-              <div style={{ flex: 1 }}>
-                <p style={styles.sectionLabel}>Colour</p>
-                <input
-                  style={styles.input}
-                  type="text"
-                  placeholder="e.g. Blue"
-                  value={form.colour}
-                  onChange={(e) => update('colour', e.target.value)}
-                />
-              </div>
-              <div style={{ flex: '0 0 80px' }}>
-                <p style={styles.sectionLabel}>Qty</p>
-                <input
-                  style={{ ...styles.input, textAlign: 'center' }}
-                  type="number"
-                  min="1"
-                  value={form.quantity}
-                  onChange={(e) => update('quantity', e.target.value)}
-                />
-              </div>
+          {/* Colour */}
+          <div style={s.section}>
+            <p style={s.label}>Colour</p>
+            {/* Dot swatches */}
+            <div style={s.dotRow}>
+              {COLOURS.map((c) => {
+                const active = form.colour === c.name;
+                return (
+                  <button
+                    key={c.name}
+                    type="button"
+                    className="colour-dot"
+                    title={c.name}
+                    aria-label={c.name}
+                    style={{
+                      background: c.hex,
+                      outline: active ? `3px solid #3C3489` : '3px solid transparent',
+                      outlineOffset: 2,
+                      border: c.name === 'White' ? '1.5px solid #ccc' : 'none',
+                    }}
+                    onClick={() => update('colour', active ? '' : c.name)}
+                  />
+                );
+              })}
             </div>
+            {/* Free-text fallback */}
+            <input
+              style={{ ...s.input, marginTop: 10 }}
+              type="text"
+              placeholder="Or type a colour…"
+              value={form.colour}
+              onChange={(e) => update('colour', e.target.value)}
+            />
+          </div>
+
+          {/* Qty */}
+          <div style={s.section}>
+            <p style={s.label}>Qty</p>
+            <input
+              style={{ ...s.input, width: 80, textAlign: 'center' }}
+              type="number"
+              min="1"
+              value={form.quantity}
+              onChange={(e) => update('quantity', e.target.value)}
+            />
           </div>
 
           {/* Price + Date */}
-          <div style={styles.section}>
-            <div style={styles.row}>
+          <div style={{ ...s.section, borderBottom: 'none' }}>
+            <div style={s.row}>
               <div style={{ flex: 1 }}>
-                <p style={styles.sectionLabel}>Price (MWK)</p>
+                <p style={s.label}>Price (MWK)</p>
                 <input
-                  style={styles.input}
+                  style={s.input}
                   type="number"
                   min="0"
                   placeholder="optional"
@@ -218,9 +229,9 @@ export default function AddSaleSheet({ onClose, onSaved }) {
                 />
               </div>
               <div style={{ flex: '0 0 48%' }}>
-                <p style={styles.sectionLabel}>Date</p>
+                <p style={s.label}>Date</p>
                 <input
-                  style={styles.input}
+                  style={s.input}
                   type="date"
                   value={form.saleDate}
                   onChange={(e) => update('saleDate', e.target.value)}
@@ -229,14 +240,13 @@ export default function AddSaleSheet({ onClose, onSaved }) {
             </div>
           </div>
 
-          {error && <p style={styles.error}>{error}</p>}
+          {error && <p style={s.error}>{error}</p>}
         </div>
 
-        {/* Save button */}
-        <div style={styles.footer}>
+        <div style={s.footer}>
           <button
             type="button"
-            style={saving ? { ...styles.saveBtn, opacity: 0.6 } : styles.saveBtn}
+            style={{ ...s.saveBtn, opacity: saving ? 0.6 : 1 }}
             onClick={handleSubmit}
             disabled={saving}
           >
@@ -249,39 +259,41 @@ export default function AddSaleSheet({ onClose, onSaved }) {
   );
 }
 
-const styles = {
+/* ─── Styles ─────────────────────────────────────────────────────────────── */
+
+const s = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(43, 42, 40, 0.45)',
+    background: 'rgba(12,26,46,0.55)',
     display: 'flex',
     alignItems: 'flex-end',
     justifyContent: 'center',
     zIndex: 50,
   },
-  page: {
-    background: 'var(--color-bg)',
+  sheet: {
+    background: 'var(--color-background-primary, #fff)',
     borderRadius: '20px 20px 0 0',
     width: '100%',
-    maxWidth: '480px',
-    height: '78vh',
+    maxWidth: 480,
+    height: '82vh',
     display: 'flex',
     flexDirection: 'column',
-    animation: 'sheet-up 0.25s cubic-bezier(0.32, 0.72, 0, 1)',
+    animation: 'sheet-up 0.25s cubic-bezier(0.32,0.72,0,1)',
     overflow: 'hidden',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   handleWrap: {
     display: 'flex',
     justifyContent: 'center',
-    paddingTop: '10px',
-    paddingBottom: '4px',
+    padding: '10px 0 4px',
     flexShrink: 0,
   },
   handle: {
-    width: '36px',
-    height: '4px',
-    borderRadius: '2px',
-    background: 'var(--color-border)',
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    background: 'var(--color-border-tertiary, #ddd)',
   },
   header: {
     display: 'flex',
@@ -291,18 +303,19 @@ const styles = {
     flexShrink: 0,
   },
   title: {
-    fontSize: '1.2rem',
-    fontWeight: '700',
-    color: 'var(--color-text)',
+    fontSize: 18,
+    fontWeight: 600,
+    color: 'var(--color-text-primary, #111)',
   },
   closeBtn: {
-    background: 'none',
+    background: 'var(--color-background-secondary, #f5f5f5)',
     border: 'none',
-    padding: '6px',
+    padding: 6,
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     cursor: 'pointer',
+    color: 'var(--color-text-tertiary, #aaa)',
   },
   body: {
     flex: 1,
@@ -310,115 +323,106 @@ const styles = {
     padding: '0 16px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '4px',
+    gap: 4,
   },
   section: {
-    paddingBottom: '16px',
-    borderBottom: '1px solid var(--color-border)',
-    marginBottom: '4px',
+    paddingBottom: 16,
+    borderBottom: '0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.08))',
+    marginBottom: 4,
   },
-  sectionLabel: {
-    fontSize: '0.75rem',
-    fontWeight: '600',
-    color: 'var(--color-muted)',
+  label: {
+    fontSize: 10,
+    fontWeight: 600,
+    color: 'var(--color-text-tertiary, #aaa)',
     textTransform: 'uppercase',
-    letterSpacing: '0.05em',
+    letterSpacing: '0.08em',
     margin: '0 0 8px',
   },
   row: {
     display: 'flex',
-    gap: '10px',
+    gap: 10,
     alignItems: 'flex-start',
   },
   input: {
     flex: 1,
     width: '100%',
     fontFamily: 'inherit',
-    fontSize: '1rem',
+    fontSize: 15,
     padding: '10px 12px',
-    border: '1px solid var(--color-border)',
-    borderRadius: '10px',
-    background: 'var(--color-surface)',
-    color: 'var(--color-text)',
+    border: '0.5px solid var(--color-border-secondary, rgba(0,0,0,0.15))',
+    borderRadius: 10,
+    background: 'var(--color-background-secondary, #f8f8f8)',
+    color: 'var(--color-text-primary, #111)',
     boxSizing: 'border-box',
+    outline: 'none',
   },
+
+  /* Size chips */
   chipRow: {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: '8px',
+    gap: 8,
   },
   chip: {
-    padding: '7px 14px',
-    borderRadius: '20px',
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-surface)',
-    color: 'var(--color-muted)',
-    fontSize: '0.9rem',
-    fontWeight: '500',
-    cursor: 'pointer',
-    fontFamily: 'inherit',
+    border: '0.5px solid var(--color-border-secondary, rgba(0,0,0,0.15))',
+    background: 'var(--color-background-secondary, #f8f8f8)',
+    color: 'var(--color-text-secondary, #666)',
   },
   chipActive: {
-    padding: '7px 14px',
-    borderRadius: '20px',
-    border: '1px solid var(--color-accent)',
-    background: 'var(--color-accent-soft)',
-    color: 'var(--color-accent)',
-    fontSize: '0.9rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    fontFamily: 'inherit',
+    border: '1.5px solid #3C3489',
+    background: '#EEEDFE',
+    color: '#3C3489',
+    fontWeight: 600,
   },
-  error: {
-    color: 'var(--color-error)',
-    fontSize: '0.85rem',
-    margin: '4px 0 0',
+
+  /* Colour dots */
+  dotRow: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 10,
   },
+
+  /* Footer */
   footer: {
     padding: '12px 16px calc(12px + env(safe-area-inset-bottom))',
-    borderTop: '1px solid var(--color-border)',
+    borderTop: '0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.08))',
     flexShrink: 0,
   },
   saveBtn: {
     width: '100%',
-    padding: '14px',
-    borderRadius: '12px',
+    padding: 14,
+    borderRadius: 12,
     border: 'none',
-    background: 'var(--color-accent)',
+    background: '#0C1A2E',
     color: '#fff',
-    fontSize: '1rem',
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: 600,
     cursor: 'pointer',
     fontFamily: 'inherit',
+    transition: 'opacity 0.15s',
   },
+
+  /* Customer dropdown */
   dropdown: {
     position: 'absolute',
     top: '100%',
     left: 0,
     right: 0,
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: '10px',
-    marginTop: '4px',
-    maxHeight: '200px',
+    background: 'var(--color-background-primary, #fff)',
+    border: '0.5px solid var(--color-border-secondary, rgba(0,0,0,0.15))',
+    borderRadius: 10,
+    marginTop: 4,
+    maxHeight: 200,
     overflowY: 'auto',
     zIndex: 10,
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
   },
   dropdownItem: {
     padding: '10px 12px',
     cursor: 'pointer',
-    borderBottom: '1px solid var(--color-border)',
-    transition: 'background 0.15s ease',
+    borderBottom: '0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.08))',
   },
-  customerName: {
-    fontWeight: '600',
-    fontSize: '0.9rem',
-    color: 'var(--color-text)',
-  },
-  customerPhone: {
-    fontSize: '0.8rem',
-    color: 'var(--color-muted)',
-    marginTop: '2px',
-  },
+  dropName:  { fontWeight: 500, fontSize: 14, color: 'var(--color-text-primary, #111)' },
+  dropPhone: { fontSize: 12, color: 'var(--color-text-tertiary, #aaa)', marginTop: 2 },
+
+  error: { color: '#A32D2D', fontSize: 13, margin: '4px 0 0' },
 };

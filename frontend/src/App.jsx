@@ -12,16 +12,22 @@ import CustomerDetail from './pages/CustomerDetail';
 import SalesHistory from './pages/SalesHistory';
 import Insights from './pages/Insights';
 import Account from './pages/Account';
-import { User } from 'lucide-react';
+import Privacy from './pages/Privacy';
+import { User, HelpCircle } from 'lucide-react';
 
 function Layout({ children, refreshKey, onAddSale, title }) {
   return (
     <div className="app-shell">
       <header className="top-bar">
         {title && <h1 className="top-bar-title">{title}</h1>}
-        <Link to="/account" className="user-icon-link" aria-label="Account">
-          <User size={24} />
-        </Link>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <Link to="/privacy" className="user-icon-link" aria-label="Privacy Policy">
+            <HelpCircle size={20} />
+          </Link>
+          <Link to="/account" className="user-icon-link" aria-label="Account">
+            <User size={24} />
+          </Link>
+        </div>
       </header>
       <main className="app-main">{children}</main>
       <NavBar onAddSale={onAddSale} />
@@ -97,6 +103,16 @@ function AppRoutes() {
             <ProtectedRoute>
               <Layout onAddSale={() => setShowAddSale(true)} title="Account">
                 <Account />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/privacy"
+          element={
+            <ProtectedRoute>
+              <Layout onAddSale={() => setShowAddSale(true)} title="Privacy">
+                <Privacy />
               </Layout>
             </ProtectedRoute>
           }
