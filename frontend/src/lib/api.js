@@ -6,6 +6,13 @@ function cleanPhone(phone) {
   return phone.replace(/[^\d+]/g, '');
 }
 
+// Get current authenticated user's ID
+async function getOwnerId() {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) throw new Error('Not authenticated');
+  return user.id;
+}
+
 export const api = {
   // Customers
   getCustomers: async (search = '') => {
@@ -22,11 +29,10 @@ export const api = {
 
     if (error) throw new Error(error.message);
 
-    // Transform the data to include sales_count
     const customersWithCount = data.map(customer => ({
       ...customer,
       sales_count: customer.sales?.[0]?.count || 0,
-      sales: undefined // Remove the nested sales object
+      sales: undefined,
     }));
 
     return customersWithCount;
@@ -69,15 +75,18 @@ export const api = {
       throw new Error('Customer name and item are required');
     }
 
+    const owner_id = await getOwnerId(); // ← get auth user
     const phone = cleanPhone(customerPhone);
 
     // 1. Find existing customer by phone (preferred) or exact name match
+    // Scoped to this owner only
     let customer = null;
 
     if (phone) {
       const { data } = await supabase
         .from('customers')
         .select('*')
+        .eq('owner_id', owner_id)
         .eq('phone', phone)
         .maybeSingle();
       customer = data;
@@ -87,6 +96,7 @@ export const api = {
       const { data } = await supabase
         .from('customers')
         .select('*')
+        .eq('owner_id', owner_id)
         .ilike('name', customerName)
         .maybeSingle();
       customer = data;
@@ -96,7 +106,7 @@ export const api = {
     if (!customer) {
       const { data: newCustomer, error: createErr } = await supabase
         .from('customers')
-        .insert([{ name: customerName, phone }])
+        .insert([{ owner_id, name: customerName, phone }]) // ← owner_id added
         .select()
         .single();
 
@@ -104,7 +114,7 @@ export const api = {
       customer = newCustomer;
     }
 
-    // 3. Compute amount if not provided but unitPrice + quantity are
+    // 3. Compute amount
     const qty = quantity ? Number(quantity) : 1;
     const price = unitPrice ? Number(unitPrice) : null;
     const finalAmount = price != null ? price * qty : null;
@@ -113,6 +123,7 @@ export const api = {
     const { data: saleData, error: saleErr } = await supabase
       .from('sales')
       .insert([{
+        owner_id,                // ← owner_id added
         customer_id: customer.id,
         item,
         size,
@@ -173,7 +184,6 @@ export const api = {
     const totalOrders = sales.length;
     const totalItems = sales.reduce((sum, s) => sum + (s.quantity || 1), 0);
 
-    // Per-day breakdown for a simple bar chart
     const byDay = {};
     for (const s of sales) {
       byDay[s.sale_date] = (byDay[s.sale_date] || 0) + (Number(s.amount) || 0);
@@ -182,7 +192,6 @@ export const api = {
       .map(([date, revenue]) => ({ date, revenue }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    // Top customers aggregation
     const customerMap = {};
     for (const s of sales) {
       const customerId = s.customer_id;
