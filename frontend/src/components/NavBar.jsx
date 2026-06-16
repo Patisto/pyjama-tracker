@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { Home, Users, Receipt, Plus, BarChart2 } from 'lucide-react';
 
-export default function NavBar({ onAddSale }) {
+export default function NavBar({ onAddSale, isSheetOpen }) {
   return (
     <>
       <style>{`
@@ -15,7 +15,7 @@ export default function NavBar({ onAddSale }) {
           background: var(--color-background-primary, #fff);
           border-top: 0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.1));
           padding-bottom: env(safe-area-inset-bottom);
-          z-index: 100;
+          transition: z-index 0s;
         }
         .nav-link {
           display: flex;
@@ -55,8 +55,10 @@ export default function NavBar({ onAddSale }) {
           opacity: 0.8;
         }
       `}</style>
-
-      <nav className="nav-bar">
+      <nav
+        className="nav-bar"
+        style={{ zIndex: isSheetOpen ? 40 : 100 }}
+      >
         <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
           <Home size={20} />
           <span>Home</span>

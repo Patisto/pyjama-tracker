@@ -33,6 +33,7 @@ export default function AddSaleSheet({ onClose, onSaved }) {
   const [customerResults, setCustomerResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState(-1);
+  const [showDate, setShowDate] = useState(false);
   const searchTimeoutRef = useRef(null);
 
   function update(field, value) {
@@ -80,9 +81,11 @@ export default function AddSaleSheet({ onClose, onSaved }) {
     <div style={s.overlay} onClick={onClose}>
       <style>{`
         @keyframes sheet-up { from { transform: translateY(100%) } to { transform: translateY(0) } }
-        .colour-dot { width:28px;height:28px;border-radius:50%;border:2.5px solid transparent;cursor:pointer;flex-shrink:0;transition:transform 0.1s }
-        .colour-dot:active { transform:scale(0.9) }
-        .chip { padding:7px 14px;border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:all 0.12s }
+        .colour-dot { width:32px;height:32px;border-radius:50%;cursor:pointer;flex-shrink:0;transition:transform 0.1s;border:none;padding:0; }
+        .colour-dot:active { transform:scale(0.88) }
+        .chip { padding:9px 16px;border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:all 0.12s }
+        .nudge-btn { background:none;border:none;color:var(--color-text-tertiary,#aaa);font-size:12px;padding:8px 0 0;cursor:pointer;font-family:inherit;text-align:left; }
+        .nudge-btn:active { opacity:0.6 }
       `}</style>
 
       <div style={s.sheet} onClick={(e) => e.stopPropagation()}>
@@ -108,6 +111,7 @@ export default function AddSaleSheet({ onClose, onSaved }) {
                   value={form.customerName}
                   onChange={(e) => update('customerName', e.target.value)}
                   autoFocus
+                  autoComplete="off"
                 />
                 {showDropdown && customerResults.length > 0 && (
                   <div style={s.dropdown}>
@@ -170,7 +174,6 @@ export default function AddSaleSheet({ onClose, onSaved }) {
           {/* Colour */}
           <div style={s.section}>
             <p style={s.label}>Colour</p>
-            {/* Dot swatches */}
             <div style={s.dotRow}>
               {COLOURS.map((c) => {
                 const active = form.colour === c.name;
@@ -185,14 +188,13 @@ export default function AddSaleSheet({ onClose, onSaved }) {
                       background: c.hex,
                       outline: active ? `3px solid #3C3489` : '3px solid transparent',
                       outlineOffset: 2,
-                      border: c.name === 'White' ? '1.5px solid #ccc' : 'none',
+                      boxShadow: c.name === 'White' ? 'inset 0 0 0 1.5px #ccc' : 'none',
                     }}
                     onClick={() => update('colour', active ? '' : c.name)}
                   />
                 );
               })}
             </div>
-            {/* Free-text fallback */}
             <input
               style={{ ...s.input, marginTop: 10 }}
               type="text"
@@ -202,19 +204,7 @@ export default function AddSaleSheet({ onClose, onSaved }) {
             />
           </div>
 
-          {/* Qty */}
-          <div style={s.section}>
-            <p style={s.label}>Qty</p>
-            <input
-              style={{ ...s.input, width: 80, textAlign: 'center' }}
-              type="number"
-              min="1"
-              value={form.quantity}
-              onChange={(e) => update('quantity', e.target.value)}
-            />
-          </div>
-
-          {/* Price + Date */}
+          {/* Price + Qty */}
           <div style={{ ...s.section, borderBottom: 'none' }}>
             <div style={s.row}>
               <div style={{ flex: 1 }}>
@@ -222,13 +212,29 @@ export default function AddSaleSheet({ onClose, onSaved }) {
                 <input
                   style={s.input}
                   type="number"
+                  inputMode="numeric"
                   min="0"
                   placeholder="optional"
                   value={form.unitPrice}
                   onChange={(e) => update('unitPrice', e.target.value)}
                 />
               </div>
-              <div style={{ flex: '0 0 48%' }}>
+              <div style={{ flex: '0 0 30%' }}>
+                <p style={s.label}>Qty</p>
+                <input
+                  style={{ ...s.input, textAlign: 'center' }}
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  value={form.quantity}
+                  onChange={(e) => update('quantity', e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Date — hidden by default */}
+            {showDate ? (
+              <div style={{ marginTop: 14 }}>
                 <p style={s.label}>Date</p>
                 <input
                   style={s.input}
@@ -237,10 +243,19 @@ export default function AddSaleSheet({ onClose, onSaved }) {
                   onChange={(e) => update('saleDate', e.target.value)}
                 />
               </div>
-            </div>
+            ) : (
+              <button
+                type="button"
+                className="nudge-btn"
+                onClick={() => setShowDate(true)}
+              >
+                Sale date: today — change?
+              </button>
+            )}
           </div>
 
           {error && <p style={s.error}>{error}</p>}
+
         </div>
 
         <div style={s.footer}>
@@ -276,7 +291,8 @@ const s = {
     borderRadius: '20px 20px 0 0',
     width: '100%',
     maxWidth: 480,
-    height: '82vh',
+    height: '92vh',
+    maxHeight: '92vh',
     display: 'flex',
     flexDirection: 'column',
     animation: 'sheet-up 0.25s cubic-bezier(0.32,0.72,0,1)',
@@ -324,6 +340,7 @@ const s = {
     display: 'flex',
     flexDirection: 'column',
     gap: 4,
+    WebkitOverflowScrolling: 'touch',
   },
   section: {
     paddingBottom: 16,
@@ -355,6 +372,7 @@ const s = {
     color: 'var(--color-text-primary, #111)',
     boxSizing: 'border-box',
     outline: 'none',
+    WebkitAppearance: 'none',
   },
 
   /* Size chips */
@@ -382,11 +400,13 @@ const s = {
     gap: 10,
   },
 
-  /* Footer */
+  /* Footer — clears the 64px NavBar + safe area */
   footer: {
-    padding: '12px 16px calc(12px + env(safe-area-inset-bottom))',
+    padding: '12px 16px',
+    paddingBottom: 'calc(64px + env(safe-area-inset-bottom) + 12px)',
     borderTop: '0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.08))',
     flexShrink: 0,
+    background: 'var(--color-background-primary, #fff)',
   },
   saveBtn: {
     width: '100%',
